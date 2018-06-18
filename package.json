@@ -1,0 +1,14 @@
+{
+  "name": "nodejsonapi",
+  "version": "1.0.0",
+  "description": "Create a json api request from node",
+  "main": "index.js",
+  "scripts": {
+    "test": "ava"
+  },
+  "author": "Bjarte Klyve Larsen",
+  "license": "ISC",
+  "devDependencies": {
+    "ava": "^0.25.0"
+  }
+}
