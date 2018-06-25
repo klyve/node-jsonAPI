@@ -18,8 +18,7 @@ function jsonApi(options) {
         },
         host: options.host.replace(/\/$/, ''),
     };
-
-    this.get = path => get(path, this.options);
+    this.store = (adapter) => new store(adapter, this.options);
 }
 
 
@@ -28,11 +27,11 @@ const init = (options) => {
 }
 
 const get = (path, options) => {
-    console.log("TRYING TO GET ITEM");
+  console.log("TRYING TO GET ITEM");
 };
 
 
 module.exports = init
 module.exports.get = get;
-module.exports.store = () => new store();
+module.exports.store = (adapter, options = {}) => new store(adapter, options);
 module.exports.types = types;
