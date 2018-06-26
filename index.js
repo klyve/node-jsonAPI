@@ -30,7 +30,6 @@ const init = (options) => {
 
 
 module.exports = init
-module.exports.get = get;
 module.exports.store = (adapter, options = {}) => new store(adapter, options);
 module.exports.types = types;
 module.exports.ajaxAdapter = ajaxAdapter;
