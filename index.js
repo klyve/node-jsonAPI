@@ -1,5 +1,6 @@
 const store = require('./store');
 const types = require('./types');
+const ajaxAdapter = require('./ajaxAdapter');
 
 const defaultOptions = {
     crawl: true,
@@ -26,12 +27,10 @@ const init = (options) => {
     return new jsonApi(options);
 }
 
-const get = (path, options) => {
-  console.log("TRYING TO GET ITEM");
-};
 
 
 module.exports = init
 module.exports.get = get;
 module.exports.store = (adapter, options = {}) => new store(adapter, options);
 module.exports.types = types;
+module.exports.ajaxAdapter = ajaxAdapter;
