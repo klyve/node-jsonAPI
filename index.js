@@ -6,6 +6,7 @@ const defaultOptions = {
     crawl: true,
     headers: {
         'Content-Type': 'application/vnd.api+json',
+        'Accept': 'application/vnd.api+json',
     },
 }
 
