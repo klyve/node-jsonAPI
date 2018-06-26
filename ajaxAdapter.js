@@ -2,12 +2,12 @@ const axios = require('axios');
 
 
 const getItem = (item, options) => new Promise((resolve, reject) => {
-  axios.get(item.url)
+  axios.get(item.url, {headers: {...options}})
     .then(resp => resolve(resp.data))
     .catch(err => reject(err));
 });
 const getAll = (item, options) => new Promise((resolve, reject) => {
-  axios.get(item.url)
+  axios.get(item.url, {headers: {...options}})
     .then(resp => resolve(resp.data))
     .catch(err => reject(err));
 });

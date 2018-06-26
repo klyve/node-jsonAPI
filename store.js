@@ -18,7 +18,7 @@ const getItem = function(item) {
     throw new Error(`Adapter not found`);
 
   return new Promise((resolve, reject) => {
-      this._adapter.getItem(item, this._options)
+      this._adapter.getItem(item, this._options.headers)
         .then(resp => {
           resolve(this.storeResponse(resp, item));
         }).catch(err => reject(err));
@@ -29,7 +29,7 @@ const getAll = function(item) {
   if(!this._adapter)
     throw new Error(`Adapter not found`);
   return new Promise((resolve, reject) => {
-      this._adapter.getAll(item, this._options)
+      this._adapter.getAll(item, this._options.headers)
         .then(resp => {
           resolve(this.storeResponse(resp, item));
         }).catch(err => reject(err));

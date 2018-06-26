@@ -19,7 +19,7 @@ function jsonApi(options) {
         },
         host: options.host.replace(/\/$/, ''),
     };
-    this.store = (adapter) => new store(adapter, this.options);
+    this.store = (adapter, headers) => new store(adapter, {...this.options, headers: {...this.options.headers, ...headers}});
 }
 
 
