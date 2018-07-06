@@ -23,15 +23,6 @@ test('Should ensure attr type', t => {
   t.is(deserialized, nameValue);
 });
 
-test('attr serialization Throws if data has no attribute field', t => {
-  const err = types.attr('name');
-  t.throws(() => err.serialize({name: 'Test'}, {}, 'name'));
-});
-
-test('attr deserialize Throws if...', t => {
-  t.pass();
-});
-
 
 test('Should ensure has-one type', t => {
   const person = types.hasOne('friend');

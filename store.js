@@ -36,22 +36,69 @@ const getAll = function(item) {
   });
 }
 
+const saveItem = function(item) {
+  if(!this._adapter)
+    throw new Error(`Adapter not found`);
+  return new Promise((resolve, reject) => {
+      this._adapter.saveItem(this.prepareRequest(item), this._options.headers)
+        .then(resp => {
+          resolve(this.storeResponse(resp, item));
+        }).catch(err => reject(err));
+  });
+}
+
+const updateItem = function(item) {
+  if(!this._adapter)
+    throw new Error(`Adapter not found`);
+
+  return new Promise((resolve, reject) => {
+      this._adapter.updateItem(this.prepareItemRequest(item), this._options.headers)
+        .then(resp => {
+          resolve(this.storeResponse(resp, item));
+        }).catch(err => reject(err));
+  });
+}
+
+const update = function(item) {
+  if(!this._adapter)
+    throw new Error(`Adapter not found`);
+  return new Promise((resolve, reject) => {
+      this._adapter.update(item, this._options.headers)
+        .then(resp => {
+          resolve(this.storeResponse(resp, item));
+        }).catch(err => reject(err));
+  });
+}
+const create = function(item) {
+  if(!this._adapter)
+    throw new Error(`Adapter not found`);
+  return new Promise((resolve, reject) => {
+      this._adapter.create(item, this._options.headers)
+        .then(resp => {
+          resolve(this.storeResponse(resp, item));
+        }).catch(err => reject(err));
+  });
+}
+
 
 const storeResponse = async function(resp, resource) {
   if(!this.inStore(resource.type))
-    throw new Error(`Resource does not exist in store`);
+    throw new Error(`Resource does not exist in store ${resource.type}`);
 
   const res = this._store[resource.type];
   let relationships = {};
   if(resp.data instanceof Array) {
-      const response = resp.data.map(item => {
+
+      const response = await Promise.all(resp.data.map(async (item) => {
         if(this.findItem(item.type, item.id)) {
-          this.setItem(item, res);
+          await this.setItem(item, res);
         }else {
-          this.createItem(item, res);
+          await this.createItem(item, res);
         }
+
         return this.model(item.id, item.type);
-      });
+      }));
+
       return response;
   }else {
     const item = this.findItem(resp.data.type, resp.data.id);
@@ -67,12 +114,7 @@ const storeResponse = async function(resp, resource) {
 }
 
 const setItem = function(data, resource) {
-  // let this._data = {
-  //   ...this._data,
-  // };
-
   this._data[data.type] = this._data[data.type].filter(elem => elem.id !== data.id);
-  // this._data = this._data;
   return this.createItem(data, resource);
 }
 
@@ -127,9 +169,6 @@ const resolveRelationships = async function(obj, resource) {
 }
 
 const createItem = async function(data, resource) {
-  // let this._data = {
-  //   ...this._data,
-  // };
 
   if(!this._data[resource._name])
     this._data[resource._name] = [];
@@ -147,6 +186,22 @@ const createItem = async function(data, resource) {
   // this._data = this._data;
 }
 
+const constructItem = function(data, resource) {
+  if(!this._data[resource._name])
+    this._data[resource._name] = [];
+    let obj = {attributes: {}, relationships:{}};
+    Object.entries(resource).forEach(([key, value]) => {
+      if(value.serialize) {
+        obj = value.serialize({}, obj, key);
+      }
+    });
+    obj._resolved = false;
+    obj.id = null;
+    obj.type = resource._name;
+    this._data[resource._name].push(obj);
+    return obj;
+}
+
 const recursiveReplace = (data, fn) => {
   if(data instanceof Array) {
     return data.map(item => recursiveReplace(item, fn));
@@ -154,6 +209,7 @@ const recursiveReplace = (data, fn) => {
 
   let obj = {};
   Object.entries(data).forEach(([key, value]) => {
+    if(key[0] === '_') return;
     if(types.isObject(value)) {
       return obj[fn(key)] = recursiveReplace(value, fn);
     }
@@ -170,13 +226,42 @@ const dashToCamelCase = str =>
     str.replace(/-([a-z])/g, g => g[1].toUpperCase());
 
 
+const prepareItemRequest = function(data) {
+  const obj = this.prepareRequest(data);
+  const id = data.id;
+  const res = this._store[data.type];
+
+  return {
+    ...obj,
+    url: `${res._host.replace(/\/$/, '')}/${res._path}/${id}`,
+  }
+}
+
+const prepareRequest = function(data) {
+  const type = data.type;
+  const id = data.id;
+
+  if(!this.inStore(type))
+    throw new Error(`Resource does not exist in store  ${type}`);
+
+  const res = this._store[type];
+  let obj = {
+    url: `${res._host.replace(/\/$/, '')}/${res._path}`,
+    data: {
+      ...recursiveReplace(data, camelCaseToDash),
+    },
+  };
+
+  return obj;
+}
+
 const find = function(type, id) {
 
   if(type == null || id == null)
     throw new Error(`function find requires (type, id)`);
 
   if(!this.inStore(type))
-    throw new Error(`Resource does not exist in store`);
+    throw new Error(`Resource does not exist in store  ${type}`);
 
   const res = this._store[type];
   // Check if we have this record
@@ -216,7 +301,7 @@ const findAll = function(type) {
   if(!type)
     throw new Error(`function find requires (type)`);
   if(!this.inStore(type))
-    throw new Error(`Resource does not exist in store`);
+    throw new Error(`Resource does not exist in store  ${type}`);
 
   if(!this._data[type])
     this._data[type] = [];
@@ -245,13 +330,16 @@ const resource = function(name, template) {
     if(!name.name)
       throw new Error(`Key name required if passing an object as first resource parameter`);
     tmpl._name = name.name;
-    tmpl._path = name.path || tmpl._name + 's';
+    tmpl._path = name.path || tmpl._name;
     tmpl._host = name.host || this._options.host;
   }else {
     tmpl._name = name;
-    tmpl._path = name + 's';
+    tmpl._path = name;
     tmpl._host = this._options.host;
+    tmpl._path += (tmpl._path[tmpl._path.length-1] !== 's') ? 's' :'' ;
   }
+
+
 
   if(this.inStore(tmpl._name)) {
     throw new Error(`The resource ${name} has already been defined`);
@@ -293,30 +381,83 @@ const getModelItem = function(obj, path) {
   }
 }
 
+const setModelItem = function(obj, path, value) {
+  const parts = path.split('.');
+
+  // check top-level
+  const first = parts[0];
+
+  if(first in obj && parts.length === 1) {
+    obj[first] = value;
+  }
+
+  parts.splice(0,1);
+  // Check attributes
+  if(obj.attributes && first in obj.attributes) {
+    if(parts.length === 0)
+      obj.attributes[first] = value;
+  }
+
+  if(obj.relationships && first in obj.relationships) {
+    const i = obj.relationships[first];
+    if(parts.length === 0 && i.data) {
+      if(i.data instanceof Array) {
+        if(!(value instanceof Array))
+          value = [value];
+        obj.relationships[first] = {
+          data: value.map(item => ({id: item.id, type: item.type})),
+        };
+      }else {
+        obj.relationships[first] = {
+          data: {id: value.id, type: value.type},
+        };
+      }
+      
+    }
+  }
+
+  return obj;
+}
+
 
 
 
 const model = function(id, type) {
-  const obj = this.findItem(type, id);
+  let obj = null;
+  if (id != null)
+    obj = this.findItem(type, id);
+  else {
+    obj = this.constructItem({}, this._store[type])
+  }
+  
   return {
     ...obj,
     get: (path) => this.getModelItem(obj, path),
-    save: () => saveModel(obj).bind(this),
-    delete: () => deletModel(obj).bind(this),
-    update: () => updateModel(obj).bind(this),
+    set: (path, value) => this.setModelItem(obj, path, value),
+    save: () => {
+      if(obj._resolved)
+        return updateModel.bind(this)(obj);
+      return saveModel.bind(this)(obj);
+    },
+    delete: () => deletModel.bind(this)(obj),
+    update: () => updateModel.bind(this)(obj),
   };
 }
 
-function saveModel(obj) {
-  console.warn("Save not implemented yet")
+const createModel = function(type) {
+  return this.model(null, type)
 }
+
+function saveModel(obj) {
+  return this.saveItem(obj);
+}
+function updateModel(obj) {
+  return this.updateItem(obj);
+}
+
 function deleteModel(obj) {
   console.warn("Delete not implemented yet");
 }
-function updateModel(obj) {
-  console.warn("Update not implemented yet");
-}
-
 
 function Store(adapter = null, options = {}) {
 
@@ -330,6 +471,7 @@ function Store(adapter = null, options = {}) {
   }
 
 
+
   this.resource = resource.bind(this);
   this.find = find.bind(this);
   this.findAll = findAll.bind(this);
@@ -340,6 +482,8 @@ function Store(adapter = null, options = {}) {
 
   this.getItem = getItem.bind(this);
   this.getAll = getAll.bind(this);
+  this.saveItem = saveItem.bind(this);
+  this.updateItem = updateItem.bind(this);
 
   this.storeResponse = storeResponse.bind(this);
 
@@ -349,12 +493,20 @@ function Store(adapter = null, options = {}) {
   this.model = model.bind(this);
   this.resolveRelationships = resolveRelationships.bind(this);
   this.getModelItem = getModelItem.bind(this);
+  this.setModelItem = setModelItem.bind(this);
+  this.constructItem = constructItem.bind(this);
+
+  this.prepareItemRequest = prepareItemRequest.bind(this);
+  this.prepareRequest = prepareRequest.bind(this);
+
+  this.createModel = createModel.bind(this);
 
   return {
     resource: this.resource,
     find: this.find,
     findAll: this.findAll,
     toString: () => JSON.stringify(this._data),
+    create: this.createModel,
     // Used internally
     inStore: this.inStore,
     findItem: this.findItem,
@@ -384,19 +536,19 @@ function Store(adapter = null, options = {}) {
       // Check if we are underfetching
       Object.entries(resource).forEach(([key, value]) => {
         if(value.type === 'attribute') {
-          if(!data.attributes[key])
+          if(data.attributes[key] === undefined)
             errors.push(`${key} not found in data attributes are you underfetching?`);
         }
         if(value.type === 'has-one') {
-          if(!data.relationships[key].data)
+          if(!data.relationships[key] || !data.relationships[key].data)
             errors.push(`${key} not found in data relationships are you underfetching?`);
-          if(!types.isObject(data.relationships[key].data))
+          if(!data.relationships[key] || !types.isObject(data.relationships[key].data))
             errors.push(`${key} not object type but marked as hasOne is this correct?`);
         }
         if(value.type === 'has-many') {
-          if(!data.relationships[key].data)
+          if(!data.relationships[key] || !data.relationships[key].data)
             errors.push(`${key} not found in data relationships are you underfetching?`);
-          if(!(data.relationships[key].data instanceof Array))
+          if(!data.relationships[key] || !(data.relationships[key].data instanceof Array))
             errors.push(`${key} not array type but marked as hasMany is this correct?`);
         }
       });
@@ -405,17 +557,17 @@ function Store(adapter = null, options = {}) {
       requiredFields.forEach(field => {
         const type = resource[field].type;
         if(type === 'attribute') {
-          if(!data.attributes || !data.attributes[field] == null ) {
+          if(!data.attributes || !data.attributes[field] === undefined ) {
             errors.push(`attribute [${field}] Marked as required but is null`);
           }
         }
         if(type === 'has-one') {
-          if(!data.relationships || !data.relationships[field] == null ) {
+          if(!data.relationships || !data.relationships[field] === undefined ) {
             errors.push(`relationship [${field}] Marked as required but is null`);
           }
         }
         if(type === 'has-many') {
-          if(!data.relationships || !data.relationships[field] == null ) {
+          if(!data.relationships || !data.relationships[field] === undefined ) {
             errors.push(`relationship [${field}] Marked as required but is null`);
           }
         }

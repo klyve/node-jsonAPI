@@ -50,6 +50,12 @@ const generatePerson = num => [...Array(num).keys()].map(id => ({
       .reply(200, {
         data: person
       });
+      nock('http://test.test')
+      .persist()
+      .patch(`/people/${person.id}`, () => true)
+      .reply(200, function(uri, requestBody) {
+        return requestBody;
+      });
   })
 
   nock('http://test.test')
@@ -58,6 +64,13 @@ const generatePerson = num => [...Array(num).keys()].map(id => ({
     .reply(200, {
       data: people
     });
+
+  nock('http://test.test')
+  .persist()
+  .post('/people', () => true)
+  .reply(200, function(uri, requestBody) {
+    return requestBody;
+  });
 
 
   const people2 = generatePerson(5);
@@ -232,6 +245,52 @@ test('Should GET all resources', async t => {
 });
 
 
-test.todo('Should POST model');
-test.todo('Should PATCH model');
+test('Should POST model', async t => {
+  const store = jsonApi.store(adapter);
+  const resource = store.resource({
+    name: 'person',
+    path: 'people',
+    host: 'http://test.test',
+  }, {
+      firstName: types.attr(),
+      lastName: types.attr(),
+      person: types.hasOne(),
+  });
+
+  const people = generatePeople(1);
+
+  const person = store.create('person');
+  // console.log("PERSON", person);
+  person.set('firstName', 'Bjarte');
+  person.set('id', 'Bjarte@rendra.io');
+  person.set('lastName', 'Klyve Larsen');
+  person.set('person', people[0]);
+  // console.log(person.relationships.friends.data);
+  person.save();
+
+  t.pass()
+});
+test('Should PATCH model', async t => {
+  const store = jsonApi.store(adapter);
+  const resource = store.resource({
+    name: 'person',
+    path: 'people',
+    host: 'http://test.test',
+  }, {
+      firstName: types.attr(),
+      lastName: types.attr(),
+  });
+
+  const resp = await resource.find(3);
+
+  resp.set('firstName', 'Hello123');
+  resp.set('lastName', 'World123');
+
+  t.is(resp.get('firstName'), 'Hello123')
+  t.is(resp.get('lastName'), 'World123')
+
+  const data = await resp.save();
+  t.is(data.get('firstName'), 'Hello123')
+  t.is(data.get('lastName'), 'World123')
+});
 test.todo('Should DELETE model');

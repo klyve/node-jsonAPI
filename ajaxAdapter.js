@@ -8,21 +8,26 @@ const getItem = (item, options) => new Promise((resolve, reject) => {
 });
 const getAll = (item, options) => new Promise((resolve, reject) => {
   axios.get(item.url, {headers: {...options}})
-    .then(resp => resolve(resp.data))
+    .then(resp => resp.data)
+    .then(data => resolve(data))
     .catch(err => reject(err));
 });
-const update = () => new Promise((resolve, reject) => {
-  console.warn('Update not implemented yet');
-  reject(true);
+const saveItem = (item, options) => new Promise((resolve, reject) => {
+  axios.post(item.url,{data:{...item.data}}, {headers: {...options}})
+    .then(resp => resp.data)
+    .then(data => resolve(data))
+    .catch(err => reject(err));
 });
-const create = () => new Promise((resolve, reject) => {
-  console.warn('Create not implemented yet');
-  reject(true);
+const updateItem = (item, options) => new Promise((resolve, reject) => {
+  axios.patch(item.url,{data:{...item.data}}, {headers: {...options}})
+    .then(resp => resp.data)
+    .then(data => resolve(data))
+    .catch(err => reject(err));
 });
 
 module.exports = {
   getItem,
   getAll,
-  update,
-  create
+  saveItem,
+  updateItem
 }

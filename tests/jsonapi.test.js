@@ -20,6 +20,7 @@ test('Should create an handler with options', t => {
         headers: {
             'Authorization': 'Bearer helloWorld',
             'Content-Type': 'application/vnd.api+json',
+            'Accept': 'application/vnd.api+json',
         }
     }
     t.deepEqual(apiHandler.options, setOptions);

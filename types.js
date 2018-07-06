@@ -1,7 +1,7 @@
 const isObject = item => item && typeof item === 'object';
 
 
-const attr = (name, options) => {
+const attr = function(name, options) {
   if(isObject(name))
     return attr(null, name);
 
@@ -15,7 +15,7 @@ const attr = (name, options) => {
       const ret = {
         ...data,
       }
-      ret.attributes[name || key] = resource[key];
+      ret.attributes[name || key] = resource[key] || this.default;
       return ret;
     },
     deserialize: (data, key) => data.attributes && data.attributes[name || key],
@@ -30,7 +30,7 @@ const hasOne = (name, options) => {
   return {
     type: 'has-one',
     default: options && options.default || {},
-    serialize: (resource, data, key) => {
+    serialize: function(resource, data, key) {
       if(!data.relationships)
         throw new Error("Data requires a relationships field");
 
@@ -39,7 +39,7 @@ const hasOne = (name, options) => {
       };
 
       if(!resource[key]) {
-        ret.relationships[name || key] = null;
+        ret.relationships[name || key] = {data:this.default};
         return ret;
       }
 
@@ -76,7 +76,7 @@ const hasMany = (name, options) => {
   return {
     type: 'has-many',
     default: [],
-    serialize: (resource, data, key) => {
+    serialize: function(resource, data, key) {
       if(!data.relationships)
         throw new Error("Data requires a relationships field");
 
@@ -85,7 +85,7 @@ const hasMany = (name, options) => {
       };
 
       if(!resource[key]) {
-        ret.relationships[name || key] = [];
+        ret.relationships[name || key] = {data:this.default};
         return ret;
       }
 
