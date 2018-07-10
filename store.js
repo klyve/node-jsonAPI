@@ -150,6 +150,9 @@ const resolveRelationships = async function(obj, resource) {
         console.warn(`Resource relationship defined as hasOne but got hasMany`);
         return;
       }
+        if(value.data == null) {
+            return;
+        }
       // Check if this item is already resolved
       const item = this.findItem(value.data.type, value.data.id);
       if(item != null) {
@@ -165,15 +168,18 @@ const resolveRelationships = async function(obj, resource) {
         return;
       }
 
-      value.data.forEach(elem => {
-        const item = this.findItem(elem.type, elem.id);
-        if(item != null) {
-          obj.relationships[key].data = obj.relationships[key].data.filter(x => x.id !== elem.id);
-          obj.relationships[key].data.push(item);
-        }else {
-          promises.push(this.find(elem.type, elem.id));
-        }
-      })
+        value.data.forEach(elem => {
+            if(elem.data == null) {
+                return;
+            }
+            const item = this.findItem(elem.type, elem.id);
+            if(item != null) {
+                obj.relationships[key].data = obj.relationships[key].data.filter(x => x.id !== elem.id);
+                obj.relationships[key].data.push(item);
+            }else {
+                promises.push(this.find(elem.type, elem.id));
+            }
+        })
     }
 
   });
