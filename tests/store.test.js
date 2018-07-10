@@ -228,6 +228,7 @@ test('Should GET a single resource', async t => {
 
 });
 
+
 test('Should GET all resources', async t => {
   const store = jsonApi.store(adapter);
   const resource = store.resource({

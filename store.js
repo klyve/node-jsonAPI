@@ -81,6 +81,25 @@ const create = function(item) {
 }
 
 
+const createUrlQuery = (query) => {
+    if (query === null) {
+        return '';
+    }
+    let q = '?';
+    Object.entries(query).forEach(([key, value]) => {
+        if(typeof value === 'object') {
+            Object.entries(value).forEach(([k1, v1]) => {
+                q += `${key}[${k1}]=${v1}&`;
+            })
+        }else {
+            q += `${key}=${value}&`
+        } 
+    });
+    q = q.slice(0, -1);
+    return q;
+}
+
+
 const storeResponse = async function(resp, resource) {
   if(!this.inStore(resource.type))
     throw new Error(`Resource does not exist in store ${resource.type}`);
@@ -255,7 +274,7 @@ const prepareRequest = function(data) {
   return obj;
 }
 
-const find = function(type, id) {
+const find = function(type, id, query = null) {
 
   if(type == null || id == null)
     throw new Error(`function find requires (type, id)`);
@@ -283,7 +302,7 @@ const find = function(type, id) {
     _resolved: false,
     id,
     type,
-    url: `${res._host.replace(/\/$/, '')}/${res._path}/${id}`,
+    url: `${res._host.replace(/\/$/, '')}/${res._path}/${id}${createUrlQuery(query)}`,
   };
 
   Object.entries(res).forEach(([key, value]) => {
@@ -297,7 +316,7 @@ const find = function(type, id) {
   return this.getItem(obj);
 }
 
-const findAll = function(type) {
+const findAll = function(type, query = null) {
   if(!type)
     throw new Error(`function find requires (type)`);
   if(!this.inStore(type))
@@ -311,7 +330,7 @@ const findAll = function(type) {
   let obj = {
     _resolved: false,
     type,
-    url: `${res._host.replace(/\/$/, '')}/${res._path}`,
+    url: `${res._host.replace(/\/$/, '')}/${res._path}${createUrlQuery(query)}`,
   };
 
   return this.getAll(obj);
@@ -349,8 +368,8 @@ const resource = function(name, template) {
   return {
     stringify: () => JSON.stringify(tmpl),
     dump: () => ({...tmpl}),
-    find: (id) => this.find(tmpl._name, id),
-    findAll: () => this.findAll(tmpl._name),
+    find: (id, query = null) => this.find(tmpl._name, id, query),
+    findAll: (query = null) => this.findAll(tmpl._name, query),
   };
 }
 
