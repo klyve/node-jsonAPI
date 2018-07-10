@@ -531,7 +531,11 @@ function Store(adapter = null, options = {}) {
     findItem: this.findItem,
 
     checkIntegrity: (resource, data, requiredFields) => {
-      let errors = [];
+        let errors = [];
+        
+        if(data == null) return [
+            null,
+        ];
       // Make sure we have the required required fields
       if(data.id == null)
         errors.push('ID Key is required, not found in response');

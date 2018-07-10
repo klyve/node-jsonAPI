@@ -75,7 +75,7 @@ const hasMany = (name, options) => {
 
   return {
     type: 'has-many',
-    default: [],
+    default: options && options.default || [],
     serialize: function(resource, data, key) {
       if(!data.relationships)
         throw new Error("Data requires a relationships field");

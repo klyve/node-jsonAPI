@@ -1,6 +1,6 @@
 {
   "name": "nodejsonapi-client",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Create a json api request from node",
   "main": "index.js",
   "scripts": {
